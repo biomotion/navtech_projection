@@ -1,0 +1,8 @@
+<?xml version='1.0'?>
+<launch>
+
+    <node name="radar_image_projection" pkg="navtech_projection" type="polar_to_cart" output="screen" />
+
+    <node name="reconfigure_gui" pkg="rqt_reconfigure" type="rqt_reconfigure" />
+
+</launch>

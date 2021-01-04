@@ -67,10 +67,10 @@ public:
     pc_pixel_resolution = config.pc_pixel_resolution;
     pc_intensity_thres = config.pc_intensity_threshold;
 
-      cart_roi.x = mapX.cols/2 - cart_max_range/radar_distance_resolution;
-      cart_roi.y = mapX.rows/2 - cart_max_range/radar_distance_resolution;
-      cart_roi.width = cart_max_range/radar_distance_resolution*2;
-      cart_roi.height = cart_max_range/radar_distance_resolution*2;
+    cart_roi.x = mapX.cols/2 - cart_max_range/radar_distance_resolution;
+    cart_roi.y = mapX.rows/2 - cart_max_range/radar_distance_resolution;
+    cart_roi.width = cart_max_range/radar_distance_resolution*2;
+    cart_roi.height = cart_max_range/radar_distance_resolution*2;
     
   }
 
