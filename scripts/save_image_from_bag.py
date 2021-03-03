@@ -35,9 +35,9 @@ def main():
     bag = rosbag.Bag(args.bag_file, "r")
     bridge = CvBridge()
     count = 0
-    for topic, msg, t in bag.read_messages(topics=[args.image_topic]):
-        cv_img = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        timestamp = msg.header.stamp
+    for msg in bag.read_messages(topics=[args.image_topic]):
+        cv_img = bridge.imgmsg_to_cv2(msg[1], desired_encoding="passthrough")
+        timestamp = msg[1].header.stamp
         cv2.imwrite(os.path.join(args.output_dir, "%i.png" % timestamp.to_nsec()), cv_img)
         print "Wrote image %i" % count
 
