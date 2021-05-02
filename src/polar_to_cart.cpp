@@ -42,7 +42,7 @@ public:
         mapUpdated(false)
   {
 
-    nh.param<float>("radar_distance_resolution", radar_distance_resolution, 0.16);
+    nh.param<float>("radar_distance_resolution", radar_distance_resolution, 0.175);
 
     sub_image = it.subscribe("/Navtech/Polar", 1, &RadarImageConverter::imageCb, this);
     pub_pc = nh.advertise<sensor_msgs::PointCloud2>("/Navtech/Points", 1);
