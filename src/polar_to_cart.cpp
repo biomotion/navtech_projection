@@ -28,9 +28,11 @@ class RadarImageConverter
   pcl::PCLPointCloud2::Ptr pc;
   sensor_msgs::PointCloud2 ros_pc2;
   Rect cart_roi;
-  float radar_distance_resolution, cart_max_range, pc_max_range, pc_pixel_resolution;
+  float radar_distance_resolution;
+  double cart_range_x_min, cart_range_x_max, cart_range_y_min, cart_range_y_max;
+  double pc_range_x_min, pc_range_x_max, pc_range_y_min, pc_range_y_max, pc_pixel_resolution;
   int cart_image_size, pc_intensity_thres;
-  bool mapUpdated, pc_enable, cart_enable;
+  bool mapUpdated, pc_enable, cart_enable, interpolate;
   Mat mapX, mapY;
 
   dynamic_reconfigure::Server<navtech_projection::paramsConfig> server;
@@ -39,7 +41,7 @@ class RadarImageConverter
 public:
   RadarImageConverter()
       : nh("~"), it(nh), cart_image_size(5712),
-        mapUpdated(false)
+        mapUpdated(false), pc_enable(true), cart_enable(true), interpolate(false)
   {
 
     nh.param<float>("radar_distance_resolution", radar_distance_resolution, 0.175);
@@ -58,20 +60,29 @@ public:
   void dynamic_reconf_cb(navtech_projection::paramsConfig &config, uint32_t level)
   {
     ROS_INFO("Updating params");
+
+    interpolate = config.interpolate;
+
     cart_enable = config.enable_cartesian;
     cart_image_size = config.cart_image_size;
-    cart_max_range = config.cart_max_range;
+    cart_range_x_min = config.cart_range_x_min;
+    cart_range_x_max = config.cart_range_x_max;
+    cart_range_y_min = config.cart_range_y_min;
+    cart_range_y_max = config.cart_range_y_max;
 
     pc_enable = config.enable_pointcloud;
-    pc_max_range = config.pc_max_range;
+    pc_range_x_min = config.pc_range_x_min;
+    pc_range_x_max = config.pc_range_x_max;
+    pc_range_y_min = config.pc_range_y_min;
+    pc_range_y_max = config.pc_range_y_max;
     pc_pixel_resolution = config.pc_pixel_resolution;
     pc_intensity_thres = config.pc_intensity_threshold;
 
-    cart_roi.x = mapX.cols/2 - cart_max_range/radar_distance_resolution;
-    cart_roi.y = mapX.rows/2 - cart_max_range/radar_distance_resolution;
-    cart_roi.width = cart_max_range/radar_distance_resolution*2;
-    cart_roi.height = cart_max_range/radar_distance_resolution*2;
-    
+    cart_roi.x = mapX.cols/2 + cart_range_x_min/radar_distance_resolution;
+    cart_roi.y = mapX.rows/2 + cart_range_y_min/radar_distance_resolution;
+    cart_roi.width = (cart_range_x_max - cart_range_x_min)/radar_distance_resolution;
+    cart_roi.height = (cart_range_y_max - cart_range_y_min)/radar_distance_resolution;
+    mapUpdated = false;
   }
 
   void updateMaps(int in_rows, int in_cols, int out_size)
@@ -100,7 +111,9 @@ public:
         else
           ptrX[j] = (atan((float)x / y) + M_PI / 2 * 3);
         ptrX[j] *= in_cols / (2 * M_PI);
-        ptrX[j] = round(ptrX[j]) + 1;
+
+        if(!interpolate)
+          ptrX[j] = round(ptrX[j]) + 1;
       }
     }
     ROS_INFO("Remap values initialized...");
@@ -124,7 +137,10 @@ public:
   void imageCartToPC(cv_bridge::CvImagePtr cv_ptr,
                      pcl::PointCloud<pcl::PointXYZI>::Ptr pc_out)
   {
-    uint16_t half_side_length = pc_max_range / pc_pixel_resolution;
+    int16_t x_start = - pc_range_x_max / pc_pixel_resolution;
+    int16_t x_end = - pc_range_x_min / pc_pixel_resolution;
+    int16_t y_start = - pc_range_y_max / pc_pixel_resolution;
+    int16_t y_end = - pc_range_y_min / pc_pixel_resolution;
     uint16_t new_img_size = cv_ptr->image.rows * radar_distance_resolution / pc_pixel_resolution;
     uint16_t img_mid = new_img_size / 2;
     Mat resized_img(new_img_size, new_img_size, CV_8UC1);
@@ -133,9 +149,9 @@ public:
 
     // ROS_INFO("generating point cloud");
     pcl::PointXYZI point;
-    for (int i = -half_side_length; i < half_side_length; i++)
+    for (int16_t i = x_start; i < x_end; i++)
     {
-      for (int j = -half_side_length; j < half_side_length; j++)
+      for (int16_t j = y_start; j < y_end; j++)
       {
         uint8_t point_value = resized_img.at<uint8_t>(img_mid + i, img_mid + j);
         if (point_value <= pc_intensity_thres)
