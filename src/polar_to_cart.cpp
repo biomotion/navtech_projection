@@ -24,6 +24,7 @@ class RadarImageConverter
   image_transport::Subscriber sub_image;
   ros::Publisher pub_pc;
   ros::Publisher pub_image;
+  ros::Publisher pub_remapped;
 
   pcl::PCLPointCloud2::Ptr pc;
   sensor_msgs::PointCloud2 ros_pc2;
@@ -49,7 +50,7 @@ public:
     sub_image = it.subscribe("/Navtech/Polar", 1, &RadarImageConverter::imageCb, this);
     pub_pc = nh.advertise<sensor_msgs::PointCloud2>("/Navtech/Points", 1);
     pub_image = nh.advertise<sensor_msgs::Image>("/Navtech/Cartesian", 1);
-
+    pub_remapped = nh.advertise<sensor_msgs::Image>("/Navtech/Remapped", 1);
     mapX = cv::Mat::zeros(cart_image_size, cart_image_size, CV_32FC1);
     mapY = cv::Mat::zeros(cart_image_size, cart_image_size, CV_32FC1);
 
@@ -78,10 +79,13 @@ public:
     pc_pixel_resolution = config.pc_pixel_resolution;
     pc_intensity_thres = config.pc_intensity_threshold;
 
-    cart_roi.x = mapX.cols/2 + cart_range_x_min/radar_distance_resolution;
-    cart_roi.y = mapX.rows/2 + cart_range_y_min/radar_distance_resolution;
-    cart_roi.width = (cart_range_x_max - cart_range_x_min)/radar_distance_resolution;
-    cart_roi.height = (cart_range_y_max - cart_range_y_min)/radar_distance_resolution;
+    cart_roi.x = max(0, int(mapX.cols/2 + cart_range_x_min/radar_distance_resolution));
+    cart_roi.y = max(0, int(mapX.rows/2 + cart_range_y_min/radar_distance_resolution));
+    cart_roi.width = max(1, min(cart_image_size, int((cart_range_x_max - cart_range_x_min)/radar_distance_resolution)));
+    cart_roi.height = max(1, min(cart_image_size, int((cart_range_y_max - cart_range_y_min)/radar_distance_resolution)));
+
+    std::cout << cart_roi << std::endl;
+
     mapUpdated = false;
   }
 
@@ -171,7 +175,7 @@ public:
   void imageCb(const sensor_msgs::ImageConstPtr &msg)
   {
     cv_bridge::CvImagePtr cv_ptr, cv_remapped(new cv_bridge::CvImage);
-
+      sensor_msgs::ImagePtr remapped_msg_out;
     // ROS_INFO("got polar image");
     try
     {
@@ -185,6 +189,12 @@ public:
     }
 
     imagePolartoCart(cv_ptr, cv_remapped);
+    remapped_msg_out = cv_remapped->toImageMsg();
+    remapped_msg_out->encoding = sensor_msgs::image_encodings::MONO8;
+    remapped_msg_out->header = msg->header;
+    remapped_msg_out->header.frame_id = "navtech_optical";
+    pub_remapped.publish(remapped_msg_out);
+
     if (cart_enable)
     {
 
