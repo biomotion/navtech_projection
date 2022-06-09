@@ -1,9 +1,9 @@
 # navtech_projection
 
 ## Supported Models
-Navtech CTS350-X
-Navtech CIR504-X
-Navtech CIR304-H
+- Navtech CTS350-X
+- Navtech CIR504-X
+- Navtech CIR304-H
 
 ---
 ## Dependencies
@@ -23,6 +23,6 @@ Navtech CIR304-H
 /Navtech/Polar (sensor_msgs/Image)
 
 ## Published topic
-/Navtech/Remapped (sensor_msgs/Image)
-/Navtech/Cartesian (sensor_msgs/Image) ( if cart_enable )
-/Navtech/Points (sensor_msgs/PointCloud2) ( if pc_enable )
+- /Navtech/Remapped (sensor_msgs/Image)
+- /Navtech/Cartesian (sensor_msgs/Image) ( if cart_enable )
+- /Navtech/Points (sensor_msgs/PointCloud2) ( if pc_enable )
